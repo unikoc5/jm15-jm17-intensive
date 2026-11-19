@@ -1557,23 +1557,32 @@
         // Time before the cursor is hidden (in ms)
         hideCursorTime: 5000
       });
-      // Override SPACE to play / pause the video
+      // SPACE = pause / resume (never restart a finished clip from t=0).
+      // Click / → = next. ← = previous.
+      function currentVideo() {
+        var slide = Reveal.getCurrentSlide();
+        if (!slide || !slide.slideBackgroundContentElement) return null;
+        var vids = slide.slideBackgroundContentElement.getElementsByTagName("video");
+        return vids.length ? vids[0] : null;
+      }
       Reveal.addKeyBinding(
-        {
-          keyCode: 32,
-          key: 'SPACE',
-          description: 'Play / pause video'
-        },
+        { keyCode: 32, key: 'SPACE', description: 'Pause / resume video' },
         () => {
-          var currentVideos = Reveal.getCurrentSlide().slideBackgroundContentElement.getElementsByTagName("video");
-          if (currentVideos.length > 0) {
-            if (currentVideos[0].paused == true) currentVideos[0].play();
-            else currentVideos[0].pause();
-          } else {
-            Reveal.next();
-          }
+          var v = currentVideo();
+          if (!v) { Reveal.next(); return; }
+          // Finished clips stay on the last frame — do not call play() (that restarts).
+          if (v.ended) return;
+          if (v.paused) v.play();
+          else v.pause();
         }
       );
+      document.addEventListener('click', function (e) {
+        if (e.button !== 0) return;
+        if (e.target.closest && e.target.closest('a, button, .controls, .progress, .toc-btn')) return;
+        try {
+          if (Reveal.isReady && Reveal.isReady()) Reveal.next();
+        } catch (err) { /* ignore */ }
+      });
     </script>
   </body>
 </html>
